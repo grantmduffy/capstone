@@ -1,10 +1,8 @@
 void setup() {
-  // put your setup code here, to run once:
-//poop
-//123
+  Serial.begin(115200);  // Set client serial freq to 115200
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  Serial.println("Hello World");
+  delay(1000);
 }
