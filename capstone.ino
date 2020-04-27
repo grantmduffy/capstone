@@ -13,10 +13,10 @@ void setup() {
 
   //set interrupt pins to inputs
   pinMode(PhotoSensor1Pin, INPUT); //sets PhotoSesnor 1 to input
-  attachInterrupt(digitalPinToInterrupt(PhotoSensor1Pin),CalcV0, CHANGE); //Sets up interrupt on change in PhotoSensor1Pin to run CalcV0
+  attachInterrupt(digitalPinToInterrupt(PhotoSensor1Pin),CalcV0, RISING); //Sets up interrupt on change in PhotoSensor1Pin to run CalcV0
   
   pinMode(PhotoSensor2Pin, INPUT); //sets PhotoSesnor 2 to input
-  attachInterrupt(digitalPinToInterrupt(PhotoSensor2Pin),CalcV0, CHANGE); //Sets up interrupt on change in PhotoSensor2Pin to run CalcV0
+  attachInterrupt(digitalPinToInterrupt(PhotoSensor2Pin),CalcV0, RISING); //Sets up interrupt on change in PhotoSensor2Pin to run CalcV0
 }
 
 void loop() {
@@ -36,7 +36,7 @@ void  CalcV0(){
   //checks if second photosensor was triggered
   if(CheckPhotoSensor == 1){
     unsigned long PSTime = PSSStartTime -PSSStartTime; //calculates total time between Photo Sensor Triggers
-    V0 = PTDistance / PStime; //calculates initial velocity
+    V0 = 1000 * PTDistance / PStime; //calculates initial velocity
     CheckPhotoSensor = 0;  //ressets next trigger to be photosensor 1
   }
 }
