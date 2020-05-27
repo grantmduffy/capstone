@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <math.h>
 
 // Serial
 #define BAUD 115200
@@ -7,8 +8,8 @@
 #define PS_PIN1 1         // pin which photosensor 1 is connected to. Left blank for now TODO: Correct pin
 #define PS_PIN2 2         // pin which photosensor 2 is connected to. Left blank for now TODO: Correct pin
 #define PS_DISTANCE 1000  // distance between the photosensors, unit in mm. TODO: Correct the distance
-unsigned long psTime1;  // time first photsensor is triggered
-unsigned long psTime2;  // initial velocity
+unsigned long psTime1;    // time first photsensor is triggered
+unsigned long psTime2;    // initial velocity
 unsigned long t1, t2, t3;
 double vel;
 
@@ -30,26 +31,56 @@ uint16_t encoderPos;
 #define LOOKUP_TABLE_SIZE 256
 HardwareTimer sampleTimer(TIM3); // TODO: Check if TIM3 works for controller timer
 unsigned int lookupTable[LOOKUP_TABLE_SIZE];
+double goalPos;
+
+// Design Constants
+#define R 0.032               // radius [m]
+#define N 1                   // gear ratio
+#define W_FREE 401.076662108  // free velocity
+#define T_STALL 0.499         // stall torque [N-m]
+#define J_EQ 0.000052;        // equivelent inertia
+#define G 9.81                // gravitational constant
+#define TAU 0.1287            // time constant
+
+// Logging
+#define SAMPLE_SIZE 500
+double positions[SAMPLE_SIZE];
 
 
 void setup() {
-  setupSerial();         // Set serial
-//  setupDac();            // Start I2C for DAC
-//  setupController();     // Configure controller timer
-  setupEncoder();        // Configure encoder counter
-//  setupPhotosensors();   // Configure interrups for photosensors
+  setupSerial();              // Setup serial
+  setupDac();                 // Start I2C for DAC
+//  setupController();          // Configure controller timer
+  setupEncoder();             // Configure encoder counter
+//  setupPhotosensors();        // Configure interrups for photosensors
+  pinMode(PA10, INPUT);
 }
 
 
 void loop() {
-  Serial.println(readEncoder());
-  delay(100);
+//  Test Encoder
+//  delay(100);
+//  Serial.println(readEncoder());
+//  writeDac(encoderPos / 16);
+
 //  while (psTime1 == 0 && psTime2 == 0);
-//  double initial_velocity  = calc_velocity();
-//  lookup_times();
+//  double initialVelocity  = calcVelocity();
+//  lookupTimes();
 //
 //  psTime1 = 0;
 //  psTime2 = 0;
+
+//  Test goal position function
+  psTime2 = millis();
+  for (int i = 0; i < SAMPLE_SIZE; i++){
+    positions[i] = getTargetPos(0.087169, 0.326034, 0.496697, .5);
+    delay(2);
+  }
+  for (int i = 0; i < SAMPLE_SIZE; i++){
+    Serial.println(positions[i], 5);
+  }
+  while (true);
+
 }
 
 
@@ -129,39 +160,55 @@ void callback(HardwareTimer *timer){
 void setupPhotosensors(){
   //set interrupt pins to inputs
   pinMode(PS_PIN1, INPUT); //sets PhotoSesnor 1 to input
-  attachInterrupt(digitalPinToInterrupt(PS_PIN1), interrupt_1, RISING); //Sets up interrupt on change in PhotoSensor1Pin to run CalcV0
+  attachInterrupt(digitalPinToInterrupt(PS_PIN1), interrupt1, RISING); //Sets up interrupt on change in PhotoSensor1Pin to run CalcV0
   
   pinMode(PS_PIN2, INPUT); //sets PhotoSesnor 2 to input
-  attachInterrupt(digitalPinToInterrupt(PS_PIN2), interrupt_2, RISING); //Sets up interrupt on change in PhotoSensor2Pin to run CalcV0
+  attachInterrupt(digitalPinToInterrupt(PS_PIN2), interrupt2, RISING); //Sets up interrupt on change in PhotoSensor2Pin to run CalcV0
 }
 
-void interrupt_1(){
+void interrupt1(){
   psTime1 = millis();
 }
 
-void interrupt_2(){
+void interrupt2(){
   psTime2 = millis();
 }
 
-double calc_velocity(){
+double calcVelocity(){
   vel = PS_DISTANCE / (psTime2 - psTime1);
   return vel;
 }
 
-void lookup_times(double initial_velocity){
+void lookupTimes(double initialVelocity){
   for(int i = 0; i < LOOKUP_TABLE_SIZE; i++){
-    if(lookupTable[i, 0] == initial_velocity){
+    if(lookupTable[i, 0] == initialVelocity){
       t1 = lookupTable[i, 1];
       t2 = lookupTable[i, 2];
       t3 = lookupTable[i, 3];
-    } else if(lookupTable[i + 1, 0] > initial_velocity && lookupTable[i, 0] < initial_velocity){
-      t1 = (lookupTable[i + 1, 1] - lookupTable[i, 1]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initial_velocity - lookupTable[i, 0]) + lookupTable[i, 1];
-      t2 = (lookupTable[i + 1, 2] - lookupTable[i, 2]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initial_velocity - lookupTable[i, 0]) + lookupTable[i, 2];
-      t3 = (lookupTable[i + 1, 3] - lookupTable[i, 3]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initial_velocity - lookupTable[i, 0]) + lookupTable[i, 3];
+    } else if(lookupTable[i + 1, 0] > initialVelocity && lookupTable[i, 0] < initialVelocity){
+      t1 = (lookupTable[i + 1, 1] - lookupTable[i, 1]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initialVelocity - lookupTable[i, 0]) + lookupTable[i, 1];
+      t2 = (lookupTable[i + 1, 2] - lookupTable[i, 2]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initialVelocity - lookupTable[i, 0]) + lookupTable[i, 2];
+      t3 = (lookupTable[i + 1, 3] - lookupTable[i, 3]) / (lookupTable[i + 1, 0] - lookupTable[i, 0]) * (initialVelocity - lookupTable[i, 0]) + lookupTable[i, 3];
     }
   }
 }
 
-unsigned int get_target_position(){
-  return 0;
+double getTargetPos(double t1,double t2,double t3, double V0){
+  double pos;
+  double fact = -1.0667 * V0 + 4;
+  double tau2 = TAU * fact;
+  double aConst = -(V0 + G *t2) / (t2 - t3); // original : t2-t3
+  double currTime = ((double) (millis() - psTime2) )/ 1000;
+  if (currTime < t1){
+    pos = (R / N) * W_FREE * (currTime + TAU * exp(-currTime /TAU) - TAU);
+  } else if(currTime < (2 * t1)){
+    pos = 2 * ((R / N) * W_FREE * (t1 + TAU * exp(-t1 / TAU) - TAU)) - ((R / N) * W_FREE * (((2 * t1) - currTime) + TAU * exp(-((2 * t1) - currTime) / TAU) - TAU));
+  } else if(currTime < t2){
+    pos = 2 * ((R / N) * W_FREE * (t1 + TAU * exp(-t1 / TAU) - TAU)) - ((R / N) * W_FREE * ((currTime - 2 * t1) + tau2 * exp(-(currTime - 2 * t1) / tau2) - tau2)); //F2
+  } else if (currTime < t3){
+    pos = .5 * aConst * (currTime - t3) * (currTime - t3);
+  } else{
+    pos = 0;
+  }
+  return pos;
 }
