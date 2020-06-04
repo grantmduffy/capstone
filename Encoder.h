@@ -7,7 +7,7 @@
 #define RST_PIN PB11
 
 HardwareTimer clkTimer(TIM2);
-uint16_t encoderPos = 0;
+uint16_t encoderPos = 0x1000;
 
 void setupEncoder(){
   pinMode(SEL_PIN, OUTPUT);
