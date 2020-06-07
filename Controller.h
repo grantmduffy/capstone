@@ -22,6 +22,7 @@ bool limitEffort = true;
 double maxEffort = 10.0;
 double limMaxEffort = 2.0;
 double K_adj = 0.1;
+double soften_adj = 0.1;
 
 #define FRAMES 500
 unsigned int idx;
@@ -85,9 +86,9 @@ void callback(HardwareTimer *timer){
       break;
     case CALIBRATE:
       if (digitalRead(PS_PIN2) == LOW){
-        y_zero = y - H_PS2;
+        y_zero = y - H_PS2 + H_CAL;
         currentMode = DESCEND;
-        y_goal = H_PS2;
+        y_goal = H_PS2 - H_CAL;
       } else {
         y_goal += 3.0e-5;
       }
@@ -111,6 +112,8 @@ void callback(HardwareTimer *timer){
   
   double err = y_goal - y;
   controllerEffort = getControllerEffort(err) * K_adj;
+
+  if (path.currTime > path.t2) controllerEffort *= soften_adj;
   
   if (limitEffort){
     if (controllerEffort > limMaxEffort) controllerEffort = limMaxEffort;
@@ -125,8 +128,7 @@ void callback(HardwareTimer *timer){
     controllerEffort_arr[idx] = controllerEffort;
     idx++;
   }
-  
-  dac.write(map(controllerEffort, -10, 10, 0, 4095));
+  dac.write(controllerEffort);
 }
 
 void setupController(){

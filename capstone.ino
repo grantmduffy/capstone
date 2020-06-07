@@ -9,6 +9,7 @@ bool plot = true;
 enum PlotMode {
   RUNNING,
   RECORD,
+  VELOCITY,
 } plotMode = RUNNING;
 
 void setup() {
@@ -17,7 +18,7 @@ void setup() {
   dac.begin();
   setupEncoder();
   setupController();
-//  setupPhotointerrupters();
+  setupPhotointerrupters();
 }
 
 
@@ -47,7 +48,14 @@ void loop() {
         idx++;
       }
       break;
-    
+    case VELOCITY:
+      Serial.print(v0 * 100, 5);
+      Serial.write(' ');
+      Serial.print(200 * digitalRead(PS_PIN1));
+      Serial.write(' ');
+      Serial.print(200 * digitalRead(PS_PIN2));
+      Serial.println();
+      break;
   }
 
   if (Serial.peek() == ';'){
@@ -70,12 +78,23 @@ void loop() {
         case '4':
           currentMode = RUN;
           break;
+        case '5':
+          plotMode = VELOCITY;
+          break;
       }
     } else if (s.length() >= 2 && s[0] == 'V'){
       limMaxEffort = s.substring(1).toFloat();
     } else if (s.length() >= 2 && s[0] == 'T') {
       path.begin(s.substring(1).toFloat());
       idx = 0;
+    } else if (s.length() >= 2 && s[0] == 'K') {
+      K_adj = s.substring(1).toFloat();
+    } else if (s.length() >= 2 && s[0] == 'P') {
+      ps_distance = s.substring(1).toFloat();
+    } else if (s.length() >= 2 && s[0] == 'O') {
+      y_zero += s.substring(1).toFloat() / 1000;
+    } else if (s.length() >= 2 && s[0] == 'S') {
+      soften_adj = s.substring(1).toFloat();
     } else {
       y_goal = double(s.toInt()) / 1000.0;
       idx = 0;

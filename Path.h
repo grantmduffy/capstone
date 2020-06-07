@@ -9,6 +9,7 @@
 #define H_PS2 0.6             // height of photosensor 2 from 0
 #define G 9.81                // gravitational constant
 #define TAU 0.128738374689150 // time constant
+#define H_CAL 0.05
 
 #define T1_POW 2
 #define T2_POW 3
@@ -22,6 +23,7 @@ class Path {
     double getTargetPos();
     double t1, t2, t3, v0;
     unsigned long psTime2;
+    double currTime;
   private:
     const double P_T1[T1_POW + 1] = {1.9047313e-03,  -1.4154239e-02,   7.1531688e-02};
     const double P_T2[T2_POW + 1] = {1.5281608e-03,  -1.2411495e-02,  -1.4831307e-02,   2.5422850e-01};
@@ -48,7 +50,7 @@ double Path::getTargetPos(){
   double fact = -1.0667 * v0 + 4;
   double tau2 = TAU * fact;
   double aConst = -(v0 + G *t2) / (t2 - t3);
-  double currTime = ((double) (micros() - psTime2)) / 1000000;
+  currTime = ((double) (micros() - psTime2)) / 1000000;
 //  currTime *= 0.1;
   double pos;
   if (currTime < t1){
