@@ -152,7 +152,7 @@ void loop() {
     } else if (s.length() >= 2 && s[0] == 'P') {     // P{DIST}; Set the distance between sensors in mm
       ps_distance = s.substring(1).toFloat() / 1000;
     } else if (s.length() >= 2 && s[0] == 'O') {     // O{DIST}; Set the zero offset in mm.
-      y_zero = s.substring(1).toFloat() / 1000;
+      zeroOffset = s.substring(1).toFloat() / 1000;
     } else if (s.length() >= 2 && s[0] == 'S') {     // S{COEFF}; Set the softening value. 'S1;' leaves K unchanged
       soften_adj = s.substring(1).toFloat();
     } else {                                         // Otherwise go to user set location

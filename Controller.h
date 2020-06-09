@@ -20,6 +20,7 @@ double y, y_goal, controllerEffort;
 
 // Default user values
 double y_zero = 0.0;
+double zeroOffset = 0.0; // User adjustment
 double limMaxEffort = 2.0;
 double K_adj = 0.1;
 double soften_adj = 1.0;
@@ -73,7 +74,7 @@ double getControllerEffort(double error){
 // Calculate the current location. Account for calibration
 double getY(){
   unsigned int encCount = readEncoder();
-  return encCount / CT_PER_M - y_zero;
+  return encCount / CT_PER_M - y_zero - zeroOffset;
 }
 
 // ISR run at 1000Hz
